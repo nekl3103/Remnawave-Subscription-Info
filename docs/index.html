@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="ru">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Remnawave Subscription Info</title>
+  <meta name="description"
+    content="CLI-инструмент для просмотра серверов Remnawave и настройки sing-box на роутере OpenWrt.">
+  <meta name="keywords"
+    content="sing-box, OpenWrt, Remnawave, VLESS, Shadowsocks, Trojan, Hysteria2, VMess, CLI, роутер, VPN, proxy">
+  <meta name="author" content="Александр Неклюдов">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://nekl3103.github.io/Remnawave-Subscription-Info/">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Remnawave Subscription Info">
+  <meta property="og:description" content="CLI-инструмент для настройки sing-box на OpenWrt из подписки Remnawave.">
+  <meta property="og:url" content="https://nekl3103.github.io/Remnawave-Subscription-Info/">
+  <meta property="og:site_name" content="Remnawave Subscription Info">
+  <meta property="og:locale" content="ru_RU">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Remnawave Subscription Info">
+  <meta name="twitter:description" content="CLI-инструмент для настройки sing-box на OpenWrt из подписки Remnawave.">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Remnawave Subscription Info",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "macOS, Linux, Windows",
+      "description": "CLI-инструмент для просмотра серверов Remnawave и настройки sing-box на роутере OpenWrt.",
+      "author": {
+        "@type": "Person",
+        "name": "Александр Неклюдов",
+        "url": "https://github.com/nekl3103"
+      },
+      "downloadUrl": "https://github.com/nekl3103/Remnawave-Subscription-Info/releases/latest",
+      "codeRepository": "https://github.com/nekl3103/Remnawave-Subscription-Info"
+    }
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080b10;
+      --panel: #101722;
+      --panel-2: #121d2a;
+      --text: #eef5ff;
+      --muted: #98a7ba;
+      --line: rgba(255, 255, 255, 0.1);
+      --accent: #20d18d;
+      --accent-2: #53a7ff;
+      --warn: #ffd166;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(32, 209, 141, 0.16), transparent 34rem),
+        radial-gradient(circle at 85% 10%, rgba(83, 167, 255, 0.16), transparent 32rem),
+        linear-gradient(180deg, #080b10 0%, #0a1018 48%, #080b10 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(8, 11, 16, 0.78);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 68px;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid rgba(32, 209, 141, 0.5);
+      border-radius: 8px;
+      background: rgba(32, 209, 141, 0.12);
+      color: var(--accent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .brand-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .hero {
+      padding: 86px 0 64px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      gap: 44px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 18px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .version {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 16px;
+      border: 1px solid rgba(32, 209, 141, 0.34);
+      border-radius: 8px;
+      background: rgba(32, 209, 141, 0.08);
+      padding: 5px 10px;
+      color: var(--accent);
+      font: 800 13px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 22px var(--accent);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin-bottom: 22px;
+      font-size: clamp(40px, 7vw, 78px);
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 680px;
+      margin-bottom: 32px;
+      color: #c4d0df;
+      font-size: 19px;
+    }
+
+    .hero-actions,
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-weight: 800;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #06100c;
+    }
+
+    .btn-secondary {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+    }
+
+    .terminal {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(6, 10, 15, 0.9);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .terminal-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .terminal-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #ff5f57;
+    }
+
+    .terminal-dot:nth-child(2) {
+      background: #ffbd2e;
+    }
+
+    .terminal-dot:nth-child(3) {
+      background: #28c840;
+    }
+
+    pre {
+      margin: 0;
+      padding: 24px;
+      overflow-x: auto;
+      color: #dce8f7;
+      font: 14px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .prompt {
+      color: var(--accent);
+    }
+
+    .comment {
+      color: #718096;
+    }
+
+    section {
+      padding: 58px 0;
+    }
+
+    .section-head {
+      max-width: 720px;
+      margin-bottom: 28px;
+    }
+
+    .section-head h2 {
+      margin-bottom: 10px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .features {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .downloads {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .requirements {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .steps,
+    .faq-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .preview-slider {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+      align-items: stretch;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .preview-stage {
+      position: relative;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 12px;
+      border-left: 1px solid var(--line);
+    }
+
+    .preview-slide {
+      display: none;
+    }
+
+    .preview-slide.is-active {
+      display: block;
+    }
+
+    .preview-slide img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
+    }
+
+    .preview-content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 26px;
+      padding: 28px;
+    }
+
+    .preview-copy h3 {
+      margin-bottom: 12px;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.08;
+    }
+
+    .preview-copy p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .preview-note {
+      margin-top: 18px;
+      border-left: 3px solid var(--accent);
+      padding-left: 14px;
+      color: #c4d0df;
+      font-size: 15px;
+    }
+
+    .preview-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-btn {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .slider-btn:hover {
+      border-color: rgba(32, 209, 141, 0.5);
+    }
+
+    .preview-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+      padding: 0;
+    }
+
+    .preview-dot {
+      width: 11px;
+      height: 11px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.22);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .preview-dot.is-active {
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(32, 209, 141, 0.7);
+    }
+
+    .card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
+      padding: 22px;
+    }
+
+    .card h3 {
+      margin-bottom: 9px;
+      font-size: 18px;
+    }
+
+    .card p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .icon {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      margin-bottom: 18px;
+      place-items: center;
+      border: 1px solid rgba(83, 167, 255, 0.35);
+      border-radius: 8px;
+      background: rgba(83, 167, 255, 0.1);
+      color: var(--accent-2);
+      font-weight: 900;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .download-card {
+      display: flex;
+      min-height: 230px;
+      flex-direction: column;
+    }
+
+    .download-card .btn {
+      width: 100%;
+      margin-top: auto;
+    }
+
+    .system {
+      margin-bottom: 10px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .file-name {
+      margin: 12px 0 20px;
+      color: #b7c4d6;
+      overflow-wrap: anywhere;
+      font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .step-number {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border-radius: 8px;
+      background: rgba(32, 209, 141, 0.13);
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .command-box {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.18);
+      padding: 10px 10px 10px 14px;
+    }
+
+    code {
+      color: #dce8f7;
+      overflow-wrap: anywhere;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .copy {
+      min-width: 42px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .copy:hover {
+      border-color: rgba(32, 209, 141, 0.5);
+    }
+
+    .notice {
+      border-color: rgba(255, 209, 102, 0.32);
+      background: rgba(255, 209, 102, 0.08);
+    }
+
+    .notice .icon {
+      border-color: rgba(255, 209, 102, 0.45);
+      background: rgba(255, 209, 102, 0.12);
+      color: var(--warn);
+    }
+
+    .footer {
+      padding: 34px 0 48px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .author {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .author a {
+      color: #c4d0df;
+    }
+
+    .author a:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 960px) {
+
+      .hero-grid,
+      .features,
+      .downloads,
+      .requirements,
+      .steps,
+      .faq-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .hero-grid {
+        align-items: start;
+      }
+
+      .preview-slider {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-stage {
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .nav-inner {
+        min-height: 62px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding-top: 54px;
+      }
+
+      .hero-grid,
+      .features,
+      .downloads,
+      .requirements,
+      .steps,
+      .faq-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: clamp(32px, 10vw, 42px);
+        line-height: 1.05;
+        overflow-wrap: break-word;
+      }
+
+      .lead {
+        font-size: 17px;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .card {
+        padding: 19px;
+      }
+
+      .step {
+        grid-template-columns: 1fr;
+      }
+
+      .command-box {
+        grid-template-columns: 1fr;
+      }
+
+      .copy {
+        width: 100%;
+      }
+
+      .preview-content {
+        grid-template-columns: 1fr;
+        padding: 22px;
+      }
+
+      .preview-controls {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header class="nav">
+      <div class="container nav-inner">
+        <a class="brand" href="#top" aria-label="На главный экран">
+          <span class="brand-mark">&gt;_</span>
+          <span class="brand-name">Remnawave Subscription Info</span>
+        </a>
+        <nav class="nav-links" aria-label="Навигация">
+          <a href="#features">Возможности</a>
+          <a href="#requirements">Требования</a>
+          <a href="#how">Как работает</a>
+          <a href="#download">Скачать</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="container hero-grid">
+          <div>
+            <p class="eyebrow"><span class="dot"></span> CLI Remnawave для OpenWrt(sing-box)</p>
+            <span class="version">v0.0.2</span>
+            <h1>Быстрая настройка sing-box из подписки Remnawave</h1>
+            <p class="lead">
+              Программа показывает серверы из подписки, помогает выбрать нужный узел и обновляет
+              конфигурацию sing-box на роутере OpenWrt через SSH.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="#download">Скачать</a>
+              <a class="btn btn-secondary" href="#run">Как запустить</a>
+              <a class="btn btn-secondary" href="https://github.com/nekl3103/Remnawave-Subscription-Info">GitHub</a>
+            </div>
+          </div>
+
+          <div>
+            <div class="terminal" aria-label="Пример работы в терминале">
+              <div class="terminal-head">
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+                <span class="terminal-dot"></span>
+              </div>
+              <pre><span class="prompt">$</span> ./terminal-linux-amd64
+Введите ссылку подписки или 0 для выхода: https://example.com/sub
+
+Загружено серверов: 24
+
+Список серверов:
+№    Название                         Протокол       Адрес                            Порт   Пинг
+1    NL Amsterdam                     vless          nl.example.com                   443    42 ms
+2    DE Frankfurt                     hysteria2      de.example.com                   443    58 ms
+3    PL Warsaw                        shadowsocks    pl.example.com                   8388   61 ms
+
+0. Выйти | s. Поиск сервера по названию | f. Фильтр по протоколу | r. Обновить список серверов | p. Обновить пинг
+Выберите номер сервера: 2</pre>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <section id="features">
+        <div class="container">
+          <div class="section-head">
+            <h2>Что умеет программа</h2>
+            <p>Все основные действия собраны в одном терминальном интерфейсе.</p>
+          </div>
+          <div class="grid features">
+            <article class="card">
+              <span class="icon">01</span>
+              <h3>Список серверов</h3>
+              <p>Загружает подписку Remnawave, показывает серверы и поддерживает поиск, фильтр и обновление списка.</p>
+            </article>
+            <article class="card">
+              <span class="icon">02</span>
+              <h3>Поддержка протоколов</h3>
+              <p>Работает с VLESS, Shadowsocks, Trojan и Hysteria2. VMess поддерживается для чтения из подписок.</p>
+            </article>
+            <article class="card">
+              <span class="icon">03</span>
+              <h3>Генерация outbounds</h3>
+              <p>Создает готовый outbound для sing-box и может экспортировать его в JSON-файл.</p>
+            </article>
+            <article class="card">
+              <span class="icon">04</span>
+              <h3>Запись на роутер</h3>
+              <p>Подключается к OpenWrt по SSH и обновляет только outbound с тегом proxy.</p>
+            </article>
+            <article class="card">
+              <span class="icon">05</span>
+              <h3>Backup и проверка</h3>
+              <p>Создает резервную копию config.json.bak и проверяет новый конфиг перед заменой.</p>
+            </article>
+            <article class="card">
+              <span class="icon">06</span>
+              <h3>Статус и логи</h3>
+              <p>Показывает состояние sing-box и выводит логи сервиса в реальном времени.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="requirements">
+        <div class="container">
+          <div class="section-head">
+            <h2>Требования</h2>
+            <p>Перед записью на роутер должны быть готовы базовые настройки OpenWrt и sing-box.</p>
+          </div>
+          <div class="grid requirements">
+            <article class="card">
+              <span class="icon">OW</span>
+              <h3>OpenWrt</h3>
+              <p>Роутер с доступом к shell и стандартным управлением сервисами.</p>
+            </article>
+            <article class="card">
+              <span class="icon">SB</span>
+              <h3>sing-box</h3>
+              <p>Установленный sing-box, доступный через init.d или service.</p>
+            </article>
+            <article class="card">
+              <span class="icon">SSH</span>
+              <h3>SSH-доступ</h3>
+              <p>Логин и пароль пользователя роутера, по умолчанию root@192.168.1.1.</p>
+            </article>
+            <article class="card">
+              <span class="icon">CFG</span>
+              <h3>config.json</h3>
+              <p>Существующий файл /etc/sing-box/config.json с секцией outbounds.</p>
+            </article>
+            <article class="card">
+              <span class="icon">SUB</span>
+              <h3>Подписка</h3>
+              <p>Рабочая ссылка Remnawave, доступная с компьютера, где запущена программа.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="preview">
+        <div class="container">
+          <div class="section-head">
+            <h2>Как выглядит работа с сервером</h2>
+            <p>Пять основных экранов CLI: от загрузки подписки до управления выбранным сервером и роутером.</p>
+          </div>
+          <div class="preview-slider" data-slider>
+            <div class="preview-content">
+              <div class="preview-copy">
+                <h3 data-slider-title>Главный экран</h3>
+                <p data-slider-text>Программа стартует в терминале, показывает версию, ссылки проекта и сразу просит вставить ссылку подписки Remnawave.</p>
+                <div class="preview-note" data-slider-note>Этот экран нужен, чтобы быстро начать работу без отдельной настройки или конфигурационного файла.</div>
+              </div>
+              <div class="preview-controls" aria-label="Управление слайдером">
+                <button class="slider-btn" type="button" data-slider-prev aria-label="Предыдущий слайд">‹</button>
+                <button class="slider-btn" type="button" data-slider-next aria-label="Следующий слайд">›</button>
+              </div>
+              <div class="preview-dots" aria-label="Выбор слайда">
+                <button class="preview-dot is-active" type="button" data-slider-dot="0" aria-label="Показать главный экран"></button>
+                <button class="preview-dot" type="button" data-slider-dot="1" aria-label="Показать список серверов"></button>
+                <button class="preview-dot" type="button" data-slider-dot="2" aria-label="Показать управление сервером"></button>
+                <button class="preview-dot" type="button" data-slider-dot="3" aria-label="Показать детальную информацию"></button>
+                <button class="preview-dot" type="button" data-slider-dot="4" aria-label="Показать управление роутером"></button>
+              </div>
+            </div>
+            <div class="preview-stage">
+              <div class="preview-slide is-active" data-title="Главный экран"
+                data-text="Программа стартует в терминале, показывает версию, ссылки проекта и сразу просит вставить ссылку подписки Remnawave."
+                data-note="Этот экран нужен, чтобы быстро начать работу без отдельной настройки или конфигурационного файла.">
+                <img src="images/Главная.jpeg" alt="Главный экран Remnawave Subscription Info">
+              </div>
+              <div class="preview-slide" data-title="Список серверов"
+                data-text="После загрузки подписки появляется таблица серверов с названием, протоколом, адресом, портом и пингом."
+                data-note="Из этого списка можно выбрать сервер, обновить пинг, выполнить поиск или отфильтровать узлы по протоколу.">
+                <img src="images/список серверов.jpeg" alt="Список серверов в Remnawave Subscription Info">
+              </div>
+              <div class="preview-slide" data-title="Управление сервером"
+                data-text="После выбора сервера открывается меню действий: получить ссылку подключения, показать outbound, установить на роутер или экспортировать JSON."
+                data-note="В этом же меню доступны статус, логи sing-box, backup, восстановление конфига и сброс временно сохранённых SSH-данных.">
+                <img src="images/управление сервером.png" alt="Меню управления сервером в Remnawave Subscription Info">
+              </div>
+              <div class="preview-slide" data-title="Детальная информация"
+                data-text="Экран деталей показывает параметры выбранного узла: протокол, адрес, порт, transport, TLS и другие поля из подписки."
+                data-note="Чувствительные значения вроде паролей, UUID и токенов скрываются, чтобы их можно было безопасно показать на экране.">
+                <img src="images/детальная информация.jpeg" alt="Детальная информация о сервере в Remnawave Subscription Info">
+              </div>
+              <div class="preview-slide" data-title="Управление роутером"
+                data-text="После установки можно сразу посмотреть логи sing-box, проверить статус сервиса, сменить сервер или выйти из программы."
+                data-note="Перед записью создаётся backup, новый config.json проверяется через sing-box check, а затем сервис перезапускается.">
+                <img src="images/Управление роутером.jpeg" alt="Управление роутером в Remnawave Subscription Info">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how">
+        <div class="container">
+          <div class="section-head">
+            <h2>Как это работает</h2>
+            <p>Сценарий рассчитан на роутер OpenWrt с установленным и настроенным sing-box.</p>
+          </div>
+          <div class="grid steps">
+            <article class="card step">
+              <span class="step-number">1</span>
+              <div>
+                <h3>Вставьте ссылку подписки</h3>
+                <p>Программа загрузит серверы Remnawave и подготовит список для выбора.</p>
+              </div>
+            </article>
+            <article class="card step">
+              <span class="step-number">2</span>
+              <div>
+                <h3>Выберите сервер</h3>
+                <p>Можно посмотреть детали, отфильтровать список по протоколу или обновить подписку.</p>
+              </div>
+            </article>
+            <article class="card step">
+              <span class="step-number">3</span>
+              <div>
+                <h3>Подключитесь к роутеру</h3>
+                <p>По умолчанию используется адрес root@192.168.1.1, но можно указать свой SSH-адрес.</p>
+              </div>
+            </article>
+            <article class="card step">
+              <span class="step-number">4</span>
+              <div>
+                <h3>Примените конфигурацию</h3>
+                <p>Новый config.json проверяется командой sing-box check, после успеха сервис перезапускается.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="run">
+        <div class="container">
+          <div class="section-head">
+            <h2>Запуск</h2>
+            <p>Скачайте архив для своей системы, распакуйте его и запустите файл из терминала.</p>
+          </div>
+          <div class="grid steps">
+            <article class="card">
+              <h3>macOS и Linux</h3>
+              <p>После распаковки разрешите запуск и откройте приложение.</p>
+              <div class="command-box">
+                <code>chmod +x terminal-* &amp;&amp; ./terminal-linux-amd64</code>
+                <button class="copy" type="button"
+                  data-copy="chmod +x terminal-* &amp;&amp; ./terminal-linux-amd64">Copy</button>
+              </div>
+            </article>
+            <article class="card">
+              <h3>Windows</h3>
+              <p>Распакуйте ZIP-архив и запустите EXE-файл двойным кликом.</p>
+              <div class="command-box">
+                <code>terminal-windows-amd64.exe</code>
+                <button class="copy" type="button" data-copy="terminal-windows-amd64.exe">Copy</button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="download">
+        <div class="container">
+          <div class="section-head">
+            <h2>Скачать под свою систему</h2>
+            <p>Файлы берутся из последнего GitHub Release проекта.</p>
+          </div>
+          <div class="grid downloads">
+            <article class="card download-card">
+              <div class="system">macOS Intel</div>
+              <h3>Для Mac с Intel</h3>
+              <p>Подходит для старых Mac на процессорах x86_64.</p>
+              <div class="file-name">terminal-macos-intel.tar.gz</div>
+              <a class="btn btn-primary"
+                href="https://github.com/nekl3103/Remnawave-Subscription-Info/releases/latest/download/terminal-macos-intel.tar.gz">Скачать</a>
+            </article>
+            <article class="card download-card">
+              <div class="system">macOS Apple Silicon</div>
+              <h3>Для Mac M1/M2/M3</h3>
+              <p>Версия для Mac на процессорах Apple Silicon.</p>
+              <div class="file-name">terminal-macos-apple-silicon.tar.gz</div>
+              <a class="btn btn-primary"
+                href="https://github.com/nekl3103/Remnawave-Subscription-Info/releases/latest/download/terminal-macos-apple-silicon.tar.gz">Скачать</a>
+            </article>
+            <article class="card download-card">
+              <div class="system">Linux 64-bit</div>
+              <h3>Для Linux</h3>
+              <p>Сборка для обычных 64-битных Linux-систем.</p>
+              <div class="file-name">terminal-linux-amd64.tar.gz</div>
+              <a class="btn btn-primary"
+                href="https://github.com/nekl3103/Remnawave-Subscription-Info/releases/latest/download/terminal-linux-amd64.tar.gz">Скачать</a>
+            </article>
+            <article class="card download-card">
+              <div class="system">Windows 64-bit</div>
+              <h3>Для Windows</h3>
+              <p>ZIP-архив с исполняемым EXE-файлом.</p>
+              <div class="file-name">terminal-windows-amd64.exe.zip</div>
+              <a class="btn btn-primary"
+                href="https://github.com/nekl3103/Remnawave-Subscription-Info/releases/latest/download/terminal-windows-amd64.exe.zip">Скачать</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="container">
+          <div class="section-head">
+            <h2>FAQ и безопасность</h2>
+            <p>Коротко о том, что происходит при записи конфигурации на роутер.</p>
+          </div>
+          <div class="grid faq-grid">
+            <article class="card notice">
+              <span class="icon">!</span>
+              <h3>Пароль сохраняется?</h3>
+              <p>SSH-пароль хранится только в памяти текущего запуска. После перезапуска программы его нужно ввести
+                снова.</p>
+            </article>
+            <article class="card notice">
+              <span class="icon">HK</span>
+              <h3>Проверяется host key?</h3>
+              <p>При первом SSH-подключении программа показывает fingerprint и сохраняет доверенный ключ.</p>
+            </article>
+            <article class="card">
+              <span class="icon">?</span>
+              <h3>Что меняется в config.json?</h3>
+              <p>Обновляется outbound с тегом proxy. Остальные outbounds не удаляются.</p>
+            </article>
+            <article class="card">
+              <span class="icon">✓</span>
+              <h3>Есть ли backup?</h3>
+              <p>Перед заменой создается резервная копия /etc/sing-box/config.json.bak, которую можно восстановить из
+                меню.</p>
+            </article>
+            <article class="card">
+              <span class="icon">#</span>
+              <h3>Проверяется ли конфиг?</h3>
+              <p>Перед сохранением используется sing-box check. Если проверка не проходит, основной конфиг не
+                заменяется.</p>
+            </article>
+            <article class="card">
+              <span class="icon">PR</span>
+              <h3>Что именно заменяется?</h3>
+              <p>Программа ищет outbound с tag: proxy и заменяет только его, не трогая остальные правила.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-inner">
+        <span>Remnawave Subscription Info</span>
+        <div class="author">
+          <a href="https://github.com/nekl3103/Remnawave-Subscription-Info">GitHub</a>
+          <a href="https://t.me/snek173">Telegram: snek173</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    document.querySelectorAll("[data-slider]").forEach(function (slider) {
+      var slides = Array.prototype.slice.call(slider.querySelectorAll(".preview-slide"));
+      var dots = Array.prototype.slice.call(slider.querySelectorAll("[data-slider-dot]"));
+      var title = slider.querySelector("[data-slider-title]");
+      var text = slider.querySelector("[data-slider-text]");
+      var note = slider.querySelector("[data-slider-note]");
+      var current = 0;
+
+      function showSlide(index) {
+        current = (index + slides.length) % slides.length;
+
+        slides.forEach(function (slide, slideIndex) {
+          slide.classList.toggle("is-active", slideIndex === current);
+        });
+        dots.forEach(function (dot, dotIndex) {
+          dot.classList.toggle("is-active", dotIndex === current);
+        });
+
+        title.textContent = slides[current].getAttribute("data-title");
+        text.textContent = slides[current].getAttribute("data-text");
+        note.textContent = slides[current].getAttribute("data-note");
+      }
+
+      slider.querySelector("[data-slider-prev]").addEventListener("click", function () {
+        showSlide(current - 1);
+      });
+
+      slider.querySelector("[data-slider-next]").addEventListener("click", function () {
+        showSlide(current + 1);
+      });
+
+      dots.forEach(function (dot, index) {
+        dot.addEventListener("click", function () {
+          showSlide(index);
+        });
+      });
+    });
+
+    document.querySelectorAll("[data-copy]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var text = button.getAttribute("data-copy");
+
+        function showDone() {
+          var original = button.textContent;
+          button.textContent = "OK";
+          window.setTimeout(function () {
+            button.textContent = original;
+          }, 1200);
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text).then(showDone);
+          return;
+        }
+
+        var field = document.createElement("textarea");
+        field.value = text;
+        field.setAttribute("readonly", "");
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        document.execCommand("copy");
+        document.body.removeChild(field);
+        showDone();
+      });
+    });
+  </script>
+</body>
+
+</html>

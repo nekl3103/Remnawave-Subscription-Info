@@ -20,15 +20,23 @@ jobs:
           - goos: linux
             goarch: amd64
             name: terminal-linux-amd64
+            singbox: linux-amd64.tar.gz
+            singbox_binary: sing-box
           - goos: darwin
             goarch: amd64
-            name: terminal-macos-amd64
+            name: terminal-macos-intel
+            singbox: darwin-amd64.tar.gz
+            singbox_binary: sing-box
           - goos: darwin
             goarch: arm64
-            name: terminal-macos-arm64
+            name: terminal-macos-apple-silicon
+            singbox: darwin-arm64.tar.gz
+            singbox_binary: sing-box
           - goos: windows
             goarch: amd64
             name: terminal-windows-amd64.exe
+            singbox: windows-amd64.zip
+            singbox_binary: sing-box.exe
 
     steps:
       - name: Checkout
@@ -50,13 +58,34 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -trimpath -ldflags="-s -w" -o "dist/${{ matrix.name }}" .
 
+      - name: Download sing-box
+        run: |
+          set -euo pipefail
+          version="$(curl -fsSL https://api.github.com/repos/SagerNet/sing-box/releases/latest | jq -r '.tag_name')"
+          number="${version#v}"
+          archive="sing-box-${number}-${{ matrix.singbox }}"
+          url="https://github.com/SagerNet/sing-box/releases/download/${version}/${archive}"
+
+          mkdir -p dist/package /tmp/sing-box
+          curl -fL "$url" -o "/tmp/${archive}"
+          if [[ "$archive" == *.zip ]]; then
+            unzip -q "/tmp/${archive}" -d /tmp/sing-box
+          else
+            tar -xzf "/tmp/${archive}" -C /tmp/sing-box
+          fi
+
+          cp "dist/${{ matrix.name }}" dist/package/
+          find /tmp/sing-box -type f -name "${{ matrix.singbox_binary }}" -exec cp {} dist/package/ \; -quit
+          chmod +x "dist/package/${{ matrix.name }}" || true
+          chmod +x "dist/package/${{ matrix.singbox_binary }}" || true
+
       - name: Archive
         run: |
-          cd dist
+          cd dist/package
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            zip "${{ matrix.name }}.zip" "${{ matrix.name }}"
+            zip "../${{ matrix.name }}.zip" "${{ matrix.name }}" "${{ matrix.singbox_binary }}"
           else
-            tar -czf "${{ matrix.name }}.tar.gz" "${{ matrix.name }}"
+            tar -czf "../${{ matrix.name }}.tar.gz" "${{ matrix.name }}" "${{ matrix.singbox_binary }}"
           fi
 
       - name: Upload artifact
