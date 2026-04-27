@@ -10,7 +10,7 @@
 - Показывает список серверов.
 - Показывает и вручную обновляет пинг выбранного сервера.
 - Поддерживает VLESS, Shadowsocks, Trojan и Hysteria2. VMess поддерживается для чтения из подписок.
-- Для Hysteria2 пинг проверяется через `sing-box` и GET `https://www.gstatic.com/generate_204`.
+- Для Hysteria2 проверка пинга пропускается.
 - Показывает детальную информацию выбранного сервера.
 - Генерирует готовый `outbounds` для `sing-box`.
 - Подключается к роутеру по SSH.
@@ -33,8 +33,6 @@
 - Linux 64-bit: `terminal-linux-amd64.tar.gz`
 - Windows 64-bit: `terminal-windows-amd64.exe.zip`
 
-В релизный архив входит `sing-box`. Он нужен для проверки пинга Hysteria2.
-
 ## Запуск
 
 ### macOS и Linux
@@ -48,8 +46,6 @@ chmod +x terminal-*
 
 На macOS имя файла будет `terminal-macos-intel` или `terminal-macos-apple-silicon`.
 
-Файл `sing-box` должен лежать рядом с программой.
-
 ### Windows
 
 Распакуйте `.zip` архив и запустите:
@@ -57,8 +53,6 @@ chmod +x terminal-*
 ```powershell
 terminal-windows-amd64.exe
 ```
-
-Файл `sing-box.exe` должен лежать рядом с программой.
 
 ## Как пользоваться
 

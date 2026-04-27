@@ -352,11 +352,6 @@ func TestFormatPingResult(t *testing.T) {
 	if result != "-" {
 		t.Fatalf("expected -, got %q", result)
 	}
-
-	result = formatPingResult(pingResult{Label: "no sing-box"})
-	if result != "no sing-box" {
-		t.Fatalf("expected no sing-box, got %q", result)
-	}
 }
 
 func TestPingServerSkipsEmptyAddressOrPort(t *testing.T) {
@@ -420,6 +415,13 @@ func TestPingServerUnavailable(t *testing.T) {
 	}
 }
 
+func TestPingServerSkipsHysteria(t *testing.T) {
+	result := pingServer(Server{Address: "hy.example.com", Port: "443", Protocol: "hysteria2"}, time.Millisecond)
+	if !result.Skipped || result.OK {
+		t.Fatalf("expected skipped hysteria ping, got %+v", result)
+	}
+}
+
 func TestPingLabelUsesStoredValue(t *testing.T) {
 	server := Server{Name: "NL", Address: "example.com", Port: "443", Protocol: "vless"}
 	pings := map[string]string{
@@ -447,30 +449,6 @@ func TestServerLabelWithPing(t *testing.T) {
 
 	if got := serverLabelWithPing(server, nil); got != "NL [vless]" {
 		t.Fatalf("unexpected label without ping: %q", got)
-	}
-}
-
-func TestHysteriaPingConfigUsesLocalMixedInbound(t *testing.T) {
-	server := Server{
-		Name:     "HY2",
-		Address:  "hy.example.com",
-		Port:     "443",
-		Protocol: "hysteria2",
-		Details: map[string]string{
-			"password": "secret",
-		},
-	}
-
-	body, err := hysteriaPingConfig(server, "127.0.0.1", 19091)
-	if err != nil {
-		t.Fatalf("hysteriaPingConfig returned error: %v", err)
-	}
-
-	text := string(body)
-	for _, value := range []string{`"type":"mixed"`, `"listen":"127.0.0.1"`, `"listen_port":19091`, `"outbound":"proxy"`, `"final":"direct"`, `"type":"hysteria2"`} {
-		if !strings.Contains(text, value) {
-			t.Fatalf("expected config to contain %s, got %s", value, text)
-		}
 	}
 }
 
