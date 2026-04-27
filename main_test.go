@@ -415,10 +415,24 @@ func TestPingServerUnavailable(t *testing.T) {
 	}
 }
 
-func TestPingServerSkipsHysteria(t *testing.T) {
-	result := pingServer(Server{Address: "hy.example.com", Port: "443", Protocol: "hysteria2"}, time.Millisecond)
-	if !result.Skipped || result.OK {
-		t.Fatalf("expected skipped hysteria ping, got %+v", result)
+func TestPingServerChecksHysteriaWithHTTPGet(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			t.Fatalf("expected GET request, got %s", request.Method)
+		}
+		writer.WriteHeader(http.StatusNoContent)
+	}))
+	defer server.Close()
+
+	previousURL := hysteriaPingURL
+	hysteriaPingURL = server.URL
+	defer func() {
+		hysteriaPingURL = previousURL
+	}()
+
+	result := pingServer(Server{Address: "hy.example.com", Port: "443", Protocol: "hysteria2"}, time.Second)
+	if !result.OK || result.Skipped {
+		t.Fatalf("expected successful hysteria HTTP ping, got %+v", result)
 	}
 }
 

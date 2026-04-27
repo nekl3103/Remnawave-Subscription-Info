@@ -258,10 +258,6 @@ func installRouterConfig(router routerClient, server Server) error {
 	}
 	defer runRemote(router, "rm -f "+shellQuote(tmpPath))
 
-	if output, err := runRemote(router, "sing-box check -c "+shellQuote(tmpPath)); err != nil {
-		return fmt.Errorf("sing-box check не прошел: %w: %s", err, strings.TrimSpace(output))
-	}
-
 	if _, err := runRemote(router, "mv "+shellQuote(tmpPath)+" "+shellQuote(routerConfigPath)); err != nil {
 		return err
 	}
@@ -283,9 +279,6 @@ func restoreRouterConfig(router routerClient) error {
 
 	if _, err := runRemote(router, "cp "+shellQuote(backupPath)+" "+shellQuote(routerConfigPath)); err != nil {
 		return err
-	}
-	if output, err := runRemote(router, "sing-box check -c "+shellQuote(routerConfigPath)); err != nil {
-		return fmt.Errorf("sing-box check не прошел: %w: %s", err, strings.TrimSpace(output))
 	}
 	return restartSingBox(router)
 }

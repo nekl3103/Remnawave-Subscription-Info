@@ -12,7 +12,7 @@ type Server struct {
 const (
 	defaultRouterAddress = "root@192.168.1.1"
 	appConfigDirName     = "Remnawave Subscription Info"
-	appVersion           = "0.0.2"
+	appVersion           = "0.0.3"
 	routerConfigPath     = "/etc/sing-box/config.json"
 	routerBackupPath     = "/etc/sing-box/config.json.bak"
 	colorBlue            = "\033[34m"

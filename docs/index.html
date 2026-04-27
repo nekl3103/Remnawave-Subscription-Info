@@ -700,7 +700,7 @@
         <div class="container hero-grid">
           <div>
             <p class="eyebrow"><span class="dot"></span> CLI Remnawave для OpenWrt(sing-box)</p>
-            <span class="version">v0.0.2</span>
+            <span class="version">v0.0.3</span>
             <h1>Быстрая настройка sing-box из подписки Remnawave</h1>
             <p class="lead">
               Программа показывает серверы из подписки, помогает выбрать нужный узел и обновляет
@@ -768,8 +768,8 @@
             </article>
             <article class="card">
               <span class="icon">05</span>
-              <h3>Backup и проверка</h3>
-              <p>Создает резервную копию config.json.bak и проверяет новый конфиг перед заменой.</p>
+              <h3>Backup</h3>
+              <p>Создает резервную копию config.json.bak перед заменой конфига.</p>
             </article>
             <article class="card">
               <span class="icon">06</span>
@@ -864,7 +864,7 @@
               </div>
               <div class="preview-slide" data-title="Управление роутером"
                 data-text="После установки можно сразу посмотреть логи sing-box, проверить статус сервиса, сменить сервер или выйти из программы."
-                data-note="Перед записью создаётся backup, новый config.json проверяется через sing-box check, а затем сервис перезапускается.">
+                data-note="Перед записью создаётся backup, затем сервис перезапускается.">
                 <img src="images/Управление роутером.jpeg" alt="Управление роутером в Remnawave Subscription Info">
               </div>
             </div>
@@ -904,7 +904,7 @@
               <span class="step-number">4</span>
               <div>
                 <h3>Примените конфигурацию</h3>
-                <p>Новый config.json проверяется командой sing-box check, после успеха сервис перезапускается.</p>
+                <p>Создается backup config.json, затем новый конфиг сохраняется и сервис перезапускается.</p>
               </div>
             </article>
           </div>
@@ -1013,9 +1013,8 @@
             </article>
             <article class="card">
               <span class="icon">#</span>
-              <h3>Проверяется ли конфиг?</h3>
-              <p>Перед сохранением используется sing-box check. Если проверка не проходит, основной конфиг не
-                заменяется.</p>
+              <h3>Нужен ли локальный sing-box?</h3>
+              <p>Нет. Программа собирается в один исполняемый файл и не запускает sing-box check локально.</p>
             </article>
             <article class="card">
               <span class="icon">PR</span>

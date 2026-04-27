@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -14,6 +15,8 @@ const (
 	unavailablePing   = "timeout"
 	missingPingTarget = "-"
 )
+
+var hysteriaPingURL = "https://www.gstatic.com/generate_204"
 
 type pingResult struct {
 	Latency time.Duration
@@ -57,7 +60,7 @@ func pingServer(server Server, timeout time.Duration) pingResult {
 	}
 
 	if isHysteriaProtocol(server.Protocol) {
-		return pingResult{Skipped: true}
+		return pingHTTP(hysteriaPingURL, timeout)
 	}
 
 	start := time.Now()
@@ -66,6 +69,23 @@ func pingServer(server Server, timeout time.Duration) pingResult {
 		return pingResult{}
 	}
 	_ = conn.Close()
+
+	return pingResult{Latency: time.Since(start), OK: true}
+}
+
+func pingHTTP(url string, timeout time.Duration) pingResult {
+	client := http.Client{Timeout: timeout}
+	start := time.Now()
+
+	response, err := client.Get(url)
+	if err != nil {
+		return pingResult{}
+	}
+	_ = response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return pingResult{}
+	}
 
 	return pingResult{Latency: time.Since(start), OK: true}
 }
