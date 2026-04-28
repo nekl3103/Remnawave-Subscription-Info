@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -52,6 +54,51 @@ func pingServers(servers []Server) []string {
 	wg.Wait()
 
 	return results
+}
+
+func pingAndSortServers(servers []Server, pings map[string]string) []Server {
+	results := pingServers(servers)
+	for index, server := range servers {
+		pings[serverPingKey(server)] = results[index]
+	}
+
+	return sortServersByPing(servers, pings)
+}
+
+func sortServersByPing(servers []Server, pings map[string]string) []Server {
+	sorted := append([]Server(nil), servers...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		left := pingSortRank(pings[serverPingKey(sorted[i])])
+		right := pingSortRank(pings[serverPingKey(sorted[j])])
+		if left.rank != right.rank {
+			return left.rank < right.rank
+		}
+		if left.latency != right.latency {
+			return left.latency < right.latency
+		}
+		return serverLabel(sorted[i]) < serverLabel(sorted[j])
+	})
+	return sorted
+}
+
+type pingRank struct {
+	rank    int
+	latency int64
+}
+
+func pingSortRank(value string) pingRank {
+	if value == missingPingTarget || value == "" {
+		return pingRank{rank: 2}
+	}
+	if value == unavailablePing {
+		return pingRank{rank: 1}
+	}
+	msText := strings.TrimSuffix(value, " ms")
+	ms, err := strconv.ParseInt(msText, 10, 64)
+	if err != nil {
+		return pingRank{rank: 1}
+	}
+	return pingRank{rank: 0, latency: ms}
 }
 
 func pingServer(server Server, timeout time.Duration) pingResult {
@@ -131,6 +178,34 @@ func serverLabelWithPing(server Server, pings map[string]string) string {
 		return serverLabel(server)
 	}
 	return serverLabel(server) + " | Пинг: " + ping
+}
+
+func serverLabelWithColoredPing(server Server, pings map[string]string) string {
+	ping := pingLabel(server, pings)
+	if ping == missingPingTarget {
+		return serverLabel(server)
+	}
+	return serverLabel(server) + " | Пинг: " + colorPing(ping)
+}
+
+func colorPing(ping string) string {
+	if ping == unavailablePing {
+		return colorRed + ping + colorReset
+	}
+
+	msText := strings.TrimSuffix(ping, " ms")
+	ms, err := strconv.ParseInt(msText, 10, 64)
+	if err != nil {
+		return ping
+	}
+	switch {
+	case ms <= 90:
+		return colorGreen + ping + colorReset
+	case ms <= 200:
+		return colorYellow + ping + colorReset
+	default:
+		return colorRed + ping + colorReset
+	}
 }
 
 func serverPingKey(server Server) string {

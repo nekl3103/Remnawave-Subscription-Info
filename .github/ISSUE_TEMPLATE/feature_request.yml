@@ -1,0 +1,65 @@
+name: Предложить улучшение
+description: Используйте этот шаблон для новой функции или изменения поведения.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Опишите задачу через проблему пользователя и ожидаемый результат.
+        Чем конкретнее сценарий, тем проще оценить и реализовать изменение.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Правила
+      options:
+        - label: Я проверил существующие issues и не нашел похожее предложение.
+          required: true
+        - label: Я описал практический сценарий использования, а не только техническую идею.
+          required: true
+        - label: Я не публикую пароли, токены, приватные ссылки подписки и IP-адреса без маскировки.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решает изменение?
+      placeholder: Сейчас неудобно..., потому что...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Как вы видите решение?
+      placeholder: Хочу, чтобы программа...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Альтернативы
+      description: Если уже есть обходной путь, опишите его.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Область
+      options:
+        - Подписки и парсинг серверов
+        - Пинг и выбор сервера
+        - Генерация sing-box config
+        - Работа с роутером по SSH
+        - Логи, backup и восстановление
+        - Сборки и релизы
+        - Документация
+        - Другое
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Дополнительная информация
+      description: Скриншоты, примеры вывода, ссылки на документацию или похожие реализации.
+    validations:
+      required: false

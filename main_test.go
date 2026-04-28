@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/ed25519"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -140,7 +141,7 @@ func TestParseAllServersFiltersInvalidServers(t *testing.T) {
 		{"name":"OK","server":"ok.example.com","port":443,"type":"vless"},
 		{"name":"No address","port":443,"type":"vless"},
 		{"name":"No port","server":"no-port.example.com","type":"trojan"},
-		{"name":"Unsupported","server":"vmess.example.com","port":443,"type":"vmess"}
+		{"name":"VMess","server":"vmess.example.com","port":443,"type":"vmess","uuid":"uuid"}
 	]}`)
 
 	servers, err := parseAllServers([][]byte{body})
@@ -148,8 +149,8 @@ func TestParseAllServersFiltersInvalidServers(t *testing.T) {
 		t.Fatalf("parseAllServers returned error: %v", err)
 	}
 
-	if len(servers) != 1 || servers[0].Name != "OK" {
-		t.Fatalf("expected only valid server, got %+v", servers)
+	if len(servers) != 2 || servers[0].Name != "OK" || servers[1].Name != "VMess" {
+		t.Fatalf("expected valid vless and vmess servers, got %+v", servers)
 	}
 }
 
@@ -337,6 +338,52 @@ func TestParseHysteria2ShareLink(t *testing.T) {
 	}
 }
 
+func TestVMessOutboundAndConnectionLink(t *testing.T) {
+	server := Server{
+		Name:     "VM",
+		Address:  "vm.example.com",
+		Port:     "443",
+		Protocol: "vmess",
+		Details: map[string]string{
+			"id":   "uuid",
+			"aid":  "0",
+			"scy":  "auto",
+			"net":  "ws",
+			"path": "/ws",
+			"host": "cdn.example.com",
+			"tls":  "tls",
+			"sni":  "sni.example.com",
+		},
+	}
+
+	outbound, err := singBoxOutbound(server)
+	if err != nil {
+		t.Fatalf("singBoxOutbound returned error: %v", err)
+	}
+
+	tls := outbound["tls"].(map[string]any)
+	transport := outbound["transport"].(map[string]any)
+	headers := transport["headers"].(map[string]any)
+
+	if outbound["type"] != "vmess" || outbound["uuid"] != "uuid" || outbound["security"] != "auto" {
+		t.Fatalf("unexpected outbound: %+v", outbound)
+	}
+	if tls["server_name"] != "sni.example.com" {
+		t.Fatalf("unexpected tls: %+v", tls)
+	}
+	if transport["type"] != "ws" || transport["path"] != "/ws" || headers["Host"] != "cdn.example.com" {
+		t.Fatalf("unexpected transport: %+v", transport)
+	}
+
+	link, err := connectionLink(server)
+	if err != nil {
+		t.Fatalf("connectionLink returned error: %v", err)
+	}
+	if !strings.HasPrefix(link, "vmess://") {
+		t.Fatalf("expected vmess link, got %q", link)
+	}
+}
+
 func TestFormatPingResult(t *testing.T) {
 	result := formatPingResult(pingResult{Latency: 42 * time.Millisecond, OK: true})
 	if result != "42 ms" {
@@ -466,6 +513,31 @@ func TestServerLabelWithPing(t *testing.T) {
 	}
 }
 
+func TestPingAndSortServers(t *testing.T) {
+	servers := []Server{
+		{Name: "timeout", Address: "timeout.example.com", Port: "443", Protocol: "vless"},
+		{Name: "fast", Address: "fast.example.com", Port: "443", Protocol: "vless"},
+		{Name: "missing", Protocol: "vless"},
+		{Name: "slow", Address: "slow.example.com", Port: "443", Protocol: "vless"},
+	}
+	pings := map[string]string{
+		serverPingKey(servers[0]): unavailablePing,
+		serverPingKey(servers[1]): "10 ms",
+		serverPingKey(servers[2]): missingPingTarget,
+		serverPingKey(servers[3]): "50 ms",
+	}
+
+	servers = sortServersByPing(servers, pings)
+
+	got := []string{servers[0].Name, servers[1].Name, servers[2].Name, servers[3].Name}
+	want := []string{"fast", "slow", "timeout", "missing"}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Fatalf("expected order %v, got %v", want, got)
+		}
+	}
+}
+
 func TestHysteriaOutboundAddsAlpnAndObfs(t *testing.T) {
 	outbound, err := singBoxOutbound(Server{
 		Address:  "hy.example.com",
@@ -523,6 +595,72 @@ func TestFetchRejectsTooLargeSubscription(t *testing.T) {
 	_, err := fetch(server.URL, "", "*/*")
 	if err == nil {
 		t.Fatal("expected error for too large subscription")
+	}
+}
+
+func TestSimpleDiffShowsBeforeAndAfter(t *testing.T) {
+	diff := simpleDiff("{\n  \"server\": \"old\"\n}", "{\n  \"server\": \"new\"\n}")
+	if !strings.Contains(diff, "-   \"server\": \"old\"") || !strings.Contains(diff, "+   \"server\": \"new\"") {
+		t.Fatalf("unexpected diff: %s", diff)
+	}
+}
+
+func TestSingBoxCheckCommandQuotesPath(t *testing.T) {
+	got := singBoxCheckCommand("/tmp/sing-box config.json")
+	want := "sing-box check -c '/tmp/sing-box config.json'"
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestFullSingBoxConfigText(t *testing.T) {
+	body, err := fullSingBoxConfigText(Server{
+		Name:     "NL",
+		Address:  "nl.example.com",
+		Port:     "443",
+		Protocol: "vless",
+		Details:  map[string]string{"uuid": "uuid"},
+	})
+	if err != nil {
+		t.Fatalf("fullSingBoxConfigText returned error: %v", err)
+	}
+
+	var config map[string]any
+	if err := json.Unmarshal([]byte(body), &config); err != nil {
+		t.Fatalf("config is not json: %v", err)
+	}
+	if config["log"] == nil || config["dns"] == nil || config["inbounds"] == nil || config["route"] == nil {
+		t.Fatalf("config missing required sections: %+v", config)
+	}
+	outbounds := config["outbounds"].([]any)
+	if len(outbounds) != 3 || outbounds[0].(map[string]any)["tag"] != "proxy" || outbounds[1].(map[string]any)["tag"] != "direct" || outbounds[2].(map[string]any)["tag"] != "block" {
+		t.Fatalf("unexpected outbounds: %+v", outbounds)
+	}
+}
+
+func TestInstallHistoryUsesTempDir(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+	t.Setenv("TEMP", tempDir)
+	t.Setenv("TMP", tempDir)
+
+	path := installHistoryPath()
+	if !strings.HasPrefix(path, tempDir) {
+		t.Fatalf("expected temp history path under %q, got %q", tempDir, path)
+	}
+
+	now := time.Date(2026, 4, 28, 1, 2, 3, 0, time.UTC)
+	err := appendInstallHistory(Server{Name: "NL", Address: "nl.example.com", Port: "443", Protocol: "vless"}, "root@192.168.1.1", "/etc/sing-box/config.json.bak.20260428-010203", now)
+	if err != nil {
+		t.Fatalf("appendInstallHistory returned error: %v", err)
+	}
+
+	entries, err := readInstallHistory()
+	if err != nil {
+		t.Fatalf("readInstallHistory returned error: %v", err)
+	}
+	if len(entries) != 1 || entries[0].ServerName != "NL" || entries[0].BackupPath == "" {
+		t.Fatalf("unexpected entries: %+v", entries)
 	}
 }
 
@@ -665,6 +803,181 @@ func TestReadMenuChoiceReturnsInvalidChoiceForEmptyInput(t *testing.T) {
 func TestReadMenuChoiceReturnsErrorForNonNumericInput(t *testing.T) {
 	if _, err := readMenuChoice(bufio.NewReader(strings.NewReader("abc\n"))); err == nil {
 		t.Fatal("expected error for non-numeric input")
+	}
+}
+
+func TestParseOpenWrtReleasesHTMLFiltersStableReleases(t *testing.T) {
+	body := `<a href="24.10.6/">24.10.6/</a>
+<a href="25.12.0-rc1/">25.12.0-rc1/</a>
+<a href="packages-24.10/">packages-24.10/</a>
+<a href="25.12.2/">25.12.2/</a>
+<a href="23.05.6/">23.05.6/</a>`
+
+	releases := parseOpenWrtReleasesHTML(body)
+	want := []string{"25.12.2", "24.10.6", "23.05.6"}
+	if strings.Join(releases, ",") != strings.Join(want, ",") {
+		t.Fatalf("expected %v, got %v", want, releases)
+	}
+}
+
+func TestParseOpenWrtBoardInfoAndReleaseVars(t *testing.T) {
+	info := parseOpenWrtBoardInfo(`{
+		"hostname": "OpenWrt",
+		"model": "Xiaomi Mi Router 3G",
+		"board_name": "xiaomi,mi-router-3g",
+		"release": {
+			"distribution": "OpenWrt",
+			"version": "24.10.6",
+			"target": "ramips/mt7621"
+		}
+	}`)
+
+	if !info.Detected || info.Model != "Xiaomi Mi Router 3G" || info.BoardName != "xiaomi,mi-router-3g" || info.Target != "ramips/mt7621" {
+		t.Fatalf("unexpected board info: %+v", info)
+	}
+
+	info.Release = ""
+	info.Target = ""
+	mergeOpenWrtReleaseVars(&info, "DISTRIB_RELEASE='23.05.6'\nDISTRIB_TARGET='ath79/generic'\n")
+	if info.Release != "23.05.6" || info.Target != "ath79/generic" {
+		t.Fatalf("unexpected release vars: %+v", info)
+	}
+}
+
+func TestParseRouterResources(t *testing.T) {
+	resources := parseRouterDF(`Filesystem           1K-blocks      Used Available Use% Mounted on
+/dev/root                 5120      5120         0 100% /rom
+overlayfs:/overlay       20480      8000     12480  39% /overlay
+tmpfs                    62344       104     62240   1% /tmp`)
+
+	if resources.OverlayFreeKB != 12480 || resources.TmpFreeKB != 62240 {
+		t.Fatalf("unexpected resources: %+v", resources)
+	}
+}
+
+func TestDNSMasqConfigForDomains(t *testing.T) {
+	got := dnsmasqConfigForDomains([]string{"Example.com", "https://terraform.io/docs", "example.com"})
+	want := "nftset=/example.com/4#inet#fw4#vpn_domains\nnftset=/terraform.io/4#inet#fw4#vpn_domains\n"
+	if got != want {
+		t.Fatalf("expected %q, got %q", want, got)
+	}
+}
+
+func TestParseProxyDomainFileDomainsSupportsListAndDNSMasq(t *testing.T) {
+	body := `example.com
+nftset=/youtube.com/googlevideo.com/4#inet#fw4#vpn_domains
+# ignored.example.com
+nftset=/telegram.org/6#inet#fw4#vpn_domains`
+
+	domains := parseProxyDomainFileDomains(body)
+	want := []string{"example.com", "youtube.com", "googlevideo.com", "telegram.org"}
+	if strings.Join(domains, ",") != strings.Join(want, ",") {
+		t.Fatalf("expected %v, got %v", want, domains)
+	}
+}
+
+func TestParseAndUpdateDHCPVPNDomains(t *testing.T) {
+	body := `config dnsmasq
+	option domainneeded '1'
+
+config ipset
+	list name 'vpn_domains'
+	list domain 'discord.com'
+	list domain 'youtube.com'
+
+config host
+	option name 'router'`
+
+	domains := parseDHCPVPNDomains(body)
+	if strings.Join(domains, ",") != "discord.com,youtube.com" {
+		t.Fatalf("unexpected domains: %v", domains)
+	}
+
+	updated := updateDHCPVPNDomains(body, []string{"telegram.org", "discord.com"})
+	if !strings.Contains(updated, "list name 'vpn_domains'") || !strings.Contains(updated, "list domain 'telegram.org'") || strings.Contains(updated, "list domain 'youtube.com'") || !strings.Contains(updated, "config host") {
+		t.Fatalf("unexpected updated dhcp config:\n%s", updated)
+	}
+}
+
+func TestProxyDomainAddRemoveNormalizesAndDeduplicates(t *testing.T) {
+	domains := addProxyDomain(nil, "https://Example.com/path")
+	domains = addProxyDomain(domains, "*.example.com")
+	domains = addProxyDomain(domains, "terraform.io")
+	domains = removeProxyDomain(domains, "EXAMPLE.COM")
+
+	if strings.Join(domains, ",") != "terraform.io" {
+		t.Fatalf("unexpected domains: %v", domains)
+	}
+}
+
+func TestParsePackageFeedFindsPackageURL(t *testing.T) {
+	body := `Package: sing-box
+Version: 1.10.0-1
+Size: 12345
+Filename: sing-box_1.10.0-1_mipsel_24kc.ipk
+
+Package: stubby
+Version: 1.0
+Filename: stubby.ipk
+`
+
+	versions := parsePackageFeed(body, "https://downloads.openwrt.org/releases/24.10.6/packages/mipsel_24kc/packages/", "sing-box")
+	if len(versions) != 1 || versions[0].Version != "1.10.0-1" || !strings.HasSuffix(versions[0].URL, "sing-box_1.10.0-1_mipsel_24kc.ipk") {
+		t.Fatalf("unexpected versions: %+v", versions)
+	}
+}
+
+func TestParseInstalledPackages(t *testing.T) {
+	installed := parseInstalledPackages("dnsmasq-full - 2.90-r4\nstubby - 1.6.0-r1\n")
+	if installed["dnsmasq-full"].Version != "2.90-r4" || installed["stubby"].Version != "1.6.0-r1" {
+		t.Fatalf("unexpected installed packages: %+v", installed)
+	}
+}
+
+func TestPrimaryInstalledDNSOptionUsesMenuOrder(t *testing.T) {
+	options := []dnsPackageOption{
+		{Name: "dnsmasq-full", Title: "dnsmasq-full"},
+		{Name: "dnscrypt-proxy2", Title: "dnscrypt-proxy2"},
+		{Name: "stubby", Title: "stubby"},
+	}
+	installed := map[string]installedPackage{
+		"stubby":       {Name: "stubby", Version: "1"},
+		"dnsmasq-full": {Name: "dnsmasq-full", Version: "2"},
+	}
+
+	option, ok := primaryInstalledDNSOption(options, installed)
+	if !ok || option.Name != "dnsmasq-full" {
+		t.Fatalf("unexpected primary option ok=%v option=%+v", ok, option)
+	}
+}
+
+func TestParseProxyDomainFilesDeduplicatesAndLabels(t *testing.T) {
+	files := parseProxyDomainFiles(proxyDomainsPath + "\n" + proxyDomainsDnsmasqPath + "\n/etc/config/dhcp\n/tmp/dnsmasq.d/discord-voice-ip-list.txt\n/etc/dnsmasq.d/custom.conf\n" + proxyDomainsPath + "\n")
+	if len(files) != 5 {
+		t.Fatalf("expected 5 files, got %+v", files)
+	}
+	if files[0].Kind != "список доменов" || !files[0].Editable || !files[0].Deletable {
+		t.Fatalf("unexpected first file: %+v", files[0])
+	}
+	if files[1].Kind != "dnsmasq nftset" || files[2].Kind != "dhcp ipset vpn_domains" || files[2].Deletable || files[3].Kind != "discord voice ip list" || files[4].Kind != "dnsmasq" {
+		t.Fatalf("unexpected file kinds: %+v", files)
+	}
+}
+
+func TestDownloadCommandQuotesURLAndPath(t *testing.T) {
+	got := downloadCommand("https://example.com/firmware.bin", "/tmp/firmware.bin")
+	for _, value := range []string{"wget -O '/tmp/firmware.bin' 'https://example.com/firmware.bin'", "curl -L -o '/tmp/firmware.bin' 'https://example.com/firmware.bin'"} {
+		if !strings.Contains(got, value) {
+			t.Fatalf("expected command to contain %q, got %q", value, got)
+		}
+	}
+}
+
+func TestHandleMainMenuSubscriptionExitKeepsOldZeroExit(t *testing.T) {
+	state := newAppState()
+	reader := bufio.NewReader(strings.NewReader("0\n"))
+	if !handleMainMenu(reader, state) {
+		t.Fatal("expected main menu 0 to exit")
 	}
 }
 

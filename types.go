@@ -9,6 +9,16 @@ type Server struct {
 	Raw      map[string]any
 }
 
+type installHistoryEntry struct {
+	Time       string `json:"time"`
+	ServerName string `json:"server_name"`
+	Protocol   string `json:"protocol"`
+	Address    string `json:"address"`
+	Port       string `json:"port"`
+	Router     string `json:"router"`
+	BackupPath string `json:"backup_path"`
+}
+
 const (
 	defaultRouterAddress = "root@192.168.1.1"
 	appConfigDirName     = "Remnawave Subscription Info"

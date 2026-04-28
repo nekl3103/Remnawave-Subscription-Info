@@ -1,0 +1,31 @@
+name: Вопрос
+description: Используйте этот шаблон, если нужна помощь с использованием программы.
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Правила
+      options:
+        - label: Я прочитал README и не нашел ответа.
+          required: true
+        - label: Я проверил существующие issues.
+          required: true
+        - label: Я не публикую пароли, токены, приватные ссылки подписки и IP-адреса без маскировки.
+          required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: Вопрос
+      placeholder: Что именно непонятно или не получается?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Контекст
+      description: Укажите ОС, версию программы, модель роутера, версию OpenWrt/sing-box и что уже пробовали.
+    validations:
+      required: false

@@ -11,15 +11,9 @@ func main() {
 
 	clearTerminal()
 	printWelcome()
-	state.loadSubscription(reader)
 
 	for {
-		server, ok := selectServer(reader, state)
-		if !ok {
-			return
-		}
-
-		if handleServerActions(reader, state, server) {
+		if handleMainMenu(reader, state) {
 			return
 		}
 	}

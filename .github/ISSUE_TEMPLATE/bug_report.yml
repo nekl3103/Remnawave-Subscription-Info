@@ -1,0 +1,83 @@
+name: Сообщить об ошибке
+description: Используйте этот шаблон, если программа работает неправильно.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Перед созданием issue проверьте, что похожая проблема еще не открыта.
+        Заполните обязательные поля: без воспроизведения, версии и окружения проблему сложнее проверить.
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Правила
+      options:
+        - label: Я проверил существующие issues и не нашел дубль.
+          required: true
+        - label: Я использую последнюю доступную версию программы.
+          required: true
+        - label: Я не публикую пароли, токены, приватные ссылки подписки и IP-адреса без маскировки.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия
+      description: Укажите версию релиза, commit hash или напишите "из исходников".
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Операционная система
+      options:
+        - macOS Intel
+        - macOS Apple Silicon
+        - Linux amd64
+        - Windows amd64
+        - Другое
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      description: Опишите точные шаги.
+      placeholder: |
+        1. Запустил программу
+        2. Вставил ссылку подписки
+        3. Выбрал сервер
+        4. Получил ошибку
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое поведение
+      placeholder: Что должно было произойти?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактическое поведение
+      placeholder: Что произошло вместо этого?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Логи и вывод
+      description: Вставьте ошибки, вывод терминала или скриншоты. Секретные данные замаскируйте.
+      render: shell
+    validations:
+      required: false
+  - type: textarea
+    id: extra
+    attributes:
+      label: Дополнительная информация
+      description: Например тип подписки, протокол сервера, модель роутера, версия OpenWrt или sing-box.
+    validations:
+      required: false

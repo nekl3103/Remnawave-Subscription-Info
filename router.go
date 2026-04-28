@@ -224,45 +224,65 @@ func appendKnownHost(path string, hostname string, key ssh.PublicKey) error {
 	return err
 }
 
-func installRouterConfig(router routerClient, server Server) error {
+func installRouterConfig(router routerClient, server Server) (string, error) {
 	outbound, err := singBoxOutbound(server)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	body, err := runRemote(router, "cat "+shellQuote(routerConfigPath))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var config map[string]any
 	if err := json.Unmarshal([]byte(body), &config); err != nil {
-		return err
+		return "", err
 	}
 
 	updateSingBoxConfig(config, outbound)
 
 	updated, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return err
+		return "", err
 	}
 	updated = append(updated, '\n')
 
-	if _, err := backupRouterConfig(router); err != nil {
-		return err
-	}
-
 	tmpPath := fmt.Sprintf("/tmp/sing-box-config-%d.json", time.Now().UnixNano())
 	if err := writeRemote(router, tmpPath, updated); err != nil {
-		return err
+		return "", err
 	}
 	defer runRemote(router, "rm -f "+shellQuote(tmpPath))
 
-	if _, err := runRemote(router, "mv "+shellQuote(tmpPath)+" "+shellQuote(routerConfigPath)); err != nil {
-		return err
+	if err := checkSingBoxConfig(router, tmpPath); err != nil {
+		return "", err
 	}
 
-	return restartSingBox(router)
+	backupPath, err := backupRouterConfig(router)
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := runRemote(router, "mv "+shellQuote(tmpPath)+" "+shellQuote(routerConfigPath)); err != nil {
+		return "", err
+	}
+
+	if err := restartSingBox(router); err != nil {
+		return "", err
+	}
+	return backupPath, nil
+}
+
+func checkSingBoxConfig(router routerClient, path string) error {
+	output, err := runRemote(router, singBoxCheckCommand(path))
+	if err != nil {
+		return fmt.Errorf("sing-box check failed: %w: %s", err, strings.TrimSpace(output))
+	}
+	return nil
+}
+
+func singBoxCheckCommand(path string) string {
+	return "sing-box check -c " + shellQuote(path)
 }
 
 func backupRouterConfig(router routerClient) (string, error) {
@@ -438,6 +458,16 @@ func runRemote(router routerClient, command string) (string, error) {
 	return string(output), err
 }
 
+func runRemoteOutput(router routerClient, command string) ([]byte, error) {
+	session, err := router.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	return session.Output(command)
+}
+
 func streamRemote(ctx context.Context, router routerClient, command string) error {
 	session, err := router.NewSession()
 	if err != nil {
@@ -482,6 +512,43 @@ func streamRemote(ctx context.Context, router routerClient, command string) erro
 		}
 		return session.Wait()
 	}
+}
+
+func runRemoteInteractive(router routerClient, command string) error {
+	session, err := router.NewSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	fd := int(os.Stdin.Fd())
+	if term.IsTerminal(fd) {
+		oldState, err := term.MakeRaw(fd)
+		if err != nil {
+			return err
+		}
+		defer term.Restore(fd, oldState)
+	}
+
+	width, height, err := term.GetSize(fd)
+	if err != nil {
+		width = 120
+		height = 40
+	}
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO:          1,
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
+	}
+	if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
+		return err
+	}
+
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+	session.Stdin = os.Stdin
+	return session.Run(command)
 }
 
 func writeRemote(router routerClient, path string, body []byte) error {

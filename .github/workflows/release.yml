@@ -43,6 +43,15 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Race tests
+        run: go test -race ./...
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -83,10 +92,16 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > checksums.txt
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.tar.gz
             dist/*.zip
+            dist/checksums.txt
           generate_release_notes: true

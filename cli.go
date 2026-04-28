@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
@@ -40,6 +41,50 @@ func printWelcome() {
 	fmt.Println("GitHub: https://github.com/nekl3103/Remnawave-Subscription-Info")
 	fmt.Println("Telegram: @snek173")
 	fmt.Println()
+}
+
+func handleMainMenu(reader *bufio.Reader, state *appState) bool {
+	for {
+		printTitle("Главное меню")
+		fmt.Println("1. Подписка")
+		fmt.Println("2. Роутер OpenWrt")
+		fmt.Println("0. Выйти")
+		fmt.Print("Выберите пункт: ")
+
+		choice, err := readMenuChoice(reader)
+		if err != nil {
+			printError(fmt.Sprintf("Ошибка чтения пункта: %v", err))
+			return true
+		}
+		if choice == emptyMenuChoice {
+			clearTerminal()
+			continue
+		}
+
+		clearTerminal()
+		switch choice {
+		case 0:
+			return true
+		case 1:
+			clearTerminal()
+			printTitle("Вставьте ссылку подписки")
+			fmt.Println()
+			state.loadSubscription(reader)
+			for {
+				server, ok := selectServer(reader, state)
+				if !ok {
+					return true
+				}
+				if handleServerActions(reader, state, server) {
+					return true
+				}
+			}
+		case 2:
+			handleOpenWrtMenu(reader, state)
+		default:
+			printWarning("Неверный пункт меню")
+		}
+	}
 }
 
 func (state *appState) loadSubscription(reader *bufio.Reader) {
@@ -96,7 +141,7 @@ func loadServers(subscriptionURL string) ([]Server, error) {
 func selectServer(reader *bufio.Reader, state *appState) (Server, bool) {
 	for {
 		printServerList(state.visibleServers)
-		fmt.Println("0. Выйти | s. Поиск сервера по названию | f. Фильтр по протоколу | r. Обновить список серверов")
+		fmt.Println("0/q. Выйти | /. Поиск | f. Фильтр | r. Обновить | p. Пинг и сортировка")
 		fmt.Print("Выберите номер сервера: ")
 
 		choiceValue, err := readServerChoice(reader)
@@ -106,7 +151,9 @@ func selectServer(reader *bufio.Reader, state *appState) (Server, bool) {
 		}
 
 		switch choiceValue {
-		case "s":
+		case "q":
+			return Server{}, false
+		case "/":
 			clearTerminal()
 			printSelectedMenu("Поиск сервера по названию")
 			searchServers(reader, state)
@@ -120,6 +167,11 @@ func selectServer(reader *bufio.Reader, state *appState) (Server, bool) {
 			clearTerminal()
 			printSelectedMenu("Обновить список серверов")
 			refreshServers(state)
+			continue
+		case "p":
+			clearTerminal()
+			printSelectedMenu("Проверить пинг и отсортировать")
+			pingAndSortVisibleServers(state)
 			continue
 		}
 
@@ -166,7 +218,7 @@ func readServerChoice(reader *bufio.Reader) (string, error) {
 		case key == 3:
 			fmt.Println()
 			return "0", nil
-		case key == 's' || key == 'S' || key == 'f' || key == 'F' || key == 'r' || key == 'R' || key == '0':
+		case key == 'f' || key == 'F' || key == 'r' || key == 'R' || key == 'p' || key == 'P' || key == 'q' || key == 'Q' || key == '/' || key == '0':
 			fmt.Printf("%c\n", key)
 			return strings.ToLower(string(key)), nil
 		case key >= '1' && key <= '9':
@@ -214,35 +266,39 @@ func handleServerActions(reader *bufio.Reader, state *appState, server Server) b
 
 	for {
 		fmt.Println()
-		printTitle("Сервер: " + serverLabelWithPing(server, state.pings))
-		fmt.Println("1. Проверить пинг")
-		fmt.Println("2. Сменить сервер")
-		fmt.Printf("3. Получить ссылку подключения (%s://)\n", displayLinkProtocol(server.Protocol))
-		fmt.Println("4. Установить на роутер")
-		fmt.Println("5. Посмотреть логи роутера (sing-box)")
-		fmt.Println("6. Показать текущие настройки sing-box")
-		fmt.Println("7. Показать новые настройки для sing-box")
-		fmt.Println("8. Проверить статус sing-box на роутере")
-		fmt.Println("9. Показать детальную информацию")
-		fmt.Println("10. Проверить подключение к роутеру")
-		fmt.Println("11. Сделать backup sing-box (config) вручную")
-		fmt.Println("12. Восстановить sing-box (config) из backup")
-		fmt.Println("13. Экспортировать sing-box outbound в файл")
-		fmt.Println("14. Сбросить сохраненные SSH данные")
-		fmt.Println("0. Выйти")
+		printTitle("Сервер: " + serverLabelWithColoredPing(server, state.pings))
+		printTitle(colorBlue + "Подписка" + colorReset)
+		fmt.Printf("1. Получить ссылку подключения (%s://)\n", displayLinkProtocol(server.Protocol))
+		fmt.Println("2. Показать информацию о сервере")
+		fmt.Println()
+		printTitle(colorBlue + "Роутер" + colorReset)
+		fmt.Println("3. Установить на роутер")
+		fmt.Println("4. Посмотреть логи роутера (sing-box)")
+		fmt.Println("5. Показать текущие настройки sing-box")
+		fmt.Println("6. Показать новые настройки для sing-box")
+		fmt.Println("7. Проверить статус sing-box на роутере")
+		fmt.Println("8. Проверить подключение к роутеру")
+		fmt.Println("9. Сделать backup sing-box (config) вручную")
+		fmt.Println("10. Восстановить sing-box (config) из backup")
+		fmt.Println("11. Экспортировать sing-box outbound в файл")
+		fmt.Println("12. Сбросить сохраненные SSH данные")
+		fmt.Println("13. Экспортировать полный sing-box config.json")
+		fmt.Println("14. Показать историю установок")
+		fmt.Println()
+		fmt.Println("r. Сменить сервер | p. Проверить пинг | q. Выйти")
 		fmt.Print("Выберите пункт: ")
 
-		choice, err := readMenuChoice(reader)
+		choice, err := readActionChoice(reader)
 		if err != nil {
 			printError(fmt.Sprintf("Ошибка чтения пункта: %v", err))
 			return true
 		}
-		if choice == emptyMenuChoice {
+		if choice == "" {
 			clearTerminal()
 			continue
 		}
 
-		if choice != 0 {
+		if choice != "q" {
 			clearTerminal()
 		}
 		if shouldShowSelectedServerAction(choice) {
@@ -250,26 +306,35 @@ func handleServerActions(reader *bufio.Reader, state *appState, server Server) b
 		}
 
 		switch choice {
-		case 0:
+		case "q":
 			return true
-		case 1:
-			refreshServerPing(state, server)
-		case 2:
+		case "r":
 			return false
-		case 3:
-			if err := printConnectionLink(server); err != nil {
+		case "1", "p":
+			if choice == "p" {
+				refreshServerPing(state, server)
+				break
+			}
+			link, err := subscriptionLinkText(server)
+			if err != nil {
 				printError(fmt.Sprintf("Ошибка генерации ссылки: %v", err))
+				break
 			}
-		case 4:
-			if installServerOnRouter(reader, state, server) {
+			showInfoWithBack(reader, "Ваша подписка", colorBlue+link+colorReset)
+		case "2":
+			showInfoWithBack(reader, "Информация о сервере", serverDetailsText(server))
+		case "3":
+			switch installServerOnRouter(reader, state, server) {
+			case installRouterExit:
 				return true
+			case installRouterSwitchServer:
+				return false
 			}
-			return false
-		case 5:
+		case "4":
 			withRouter(reader, state, func(router *sshClientWrapper) {
 				printSingBoxLogs(router.client)
 			})
-		case 6:
+		case "5":
 			withRouter(reader, state, func(router *sshClientWrapper) {
 				body, err := currentRouterProxy(router.client)
 				if err != nil {
@@ -278,20 +343,18 @@ func handleServerActions(reader *bufio.Reader, state *appState, server Server) b
 				}
 				showInfoWithBack(reader, "Текущие настройки sing-box", body)
 			})
-		case 7:
+		case "6":
 			body, err := singBoxOutboundsText(server)
 			if err != nil {
 				printError(fmt.Sprintf("Ошибка генерации sing-box outbound: %v", err))
 				break
 			}
 			showInfoWithBack(reader, "Новые настройки для sing-box", body)
-		case 8:
+		case "7":
 			withRouter(reader, state, func(router *sshClientWrapper) {
 				printRouterStatus(router.client)
 			})
-		case 9:
-			showInfoWithBack(reader, "Детальная информация", serverDetailsText(server))
-		case 10:
+		case "8":
 			withRouter(reader, state, func(router *sshClientWrapper) {
 				if err := checkRouterConnection(router.client); err != nil {
 					printRouterError("Подключение не прошло", err)
@@ -299,7 +362,7 @@ func handleServerActions(reader *bufio.Reader, state *appState, server Server) b
 				}
 				printSuccess("[OK] Подключение к роутеру работает")
 			})
-		case 11:
+		case "9":
 			withRouter(reader, state, func(router *sshClientWrapper) {
 				path, err := backupRouterConfig(router.client)
 				if err != nil {
@@ -308,15 +371,21 @@ func handleServerActions(reader *bufio.Reader, state *appState, server Server) b
 				}
 				printSuccess("Backup создан: " + path)
 			})
-		case 12:
+		case "10":
 			restoreBackup(reader, state)
-		case 13:
+		case "11":
 			if err := exportSingBoxOutbound(reader, server); err != nil {
 				printError(fmt.Sprintf("Ошибка экспорта: %v", err))
 			}
-		case 14:
+		case "12":
 			state.routerCache.clear()
 			printSuccess("SSH данные сброшены")
+		case "13":
+			if err := exportFullSingBoxConfig(reader, server); err != nil {
+				printError(fmt.Sprintf("Ошибка экспорта: %v", err))
+			}
+		case "14":
+			showInstallHistory(reader)
 		default:
 			printWarning("Неверный пункт меню")
 		}
@@ -349,6 +418,11 @@ func showInfoWithBack(reader *bufio.Reader, title string, body string) {
 	}
 }
 
+func waitEnter(reader *bufio.Reader) {
+	fmt.Print("Нажмите Enter, чтобы продолжить...")
+	_, _ = reader.ReadString('\n')
+}
+
 func printSelectedMenu(title string) {
 	if title == "" {
 		return
@@ -357,45 +431,49 @@ func printSelectedMenu(title string) {
 	fmt.Println()
 }
 
-func shouldShowSelectedServerAction(choice int) bool {
+func shouldShowSelectedServerAction(choice string) bool {
 	switch choice {
-	case 0, 1, 2, 6, 7, 9:
+	case "0", "1", "2", "p", "r", "5", "6":
 		return false
 	default:
 		return true
 	}
 }
 
-func serverActionTitle(choice int, server Server) string {
+func serverActionTitle(choice string, server Server) string {
 	switch choice {
-	case 1:
+	case "p":
 		return "Проверить пинг"
-	case 2:
+	case "r":
 		return "Сменить сервер"
-	case 3:
+	case "1":
 		return "Получить ссылку подключения (" + displayLinkProtocol(server.Protocol) + "://)"
-	case 4:
+	case "2":
+		return "Показать информацию о сервере"
+	case "3":
 		return "Установить на роутер"
-	case 5:
+	case "4":
 		return "Посмотреть логи роутера (sing-box)"
-	case 6:
+	case "5":
 		return "Показать текущие настройки sing-box"
-	case 7:
+	case "6":
 		return "Показать новые настройки для sing-box"
-	case 8:
+	case "7":
 		return "Проверить статус sing-box на роутере"
-	case 9:
-		return "Показать детальную информацию"
-	case 10:
+	case "8":
 		return "Проверить подключение к роутеру"
-	case 11:
+	case "9":
 		return "Сделать backup sing-box (config) вручную"
-	case 12:
+	case "10":
 		return "Восстановить sing-box (config) из backup"
-	case 13:
+	case "11":
 		return "Экспортировать sing-box outbound в файл"
-	case 14:
+	case "12":
 		return "Сбросить сохраненные SSH данные"
+	case "13":
+		return "Экспортировать полный sing-box config.json"
+	case "14":
+		return "Показать историю установок"
 	default:
 		return "Неверный пункт меню"
 	}
@@ -404,6 +482,14 @@ func serverActionTitle(choice int, server Server) string {
 type sshClientWrapper struct {
 	client *ssh.Client
 }
+
+type installRouterResult int
+
+const (
+	installRouterStay installRouterResult = iota
+	installRouterSwitchServer
+	installRouterExit
+)
 
 func withRouter(reader *bufio.Reader, state *appState, action func(*sshClientWrapper)) {
 	router, err := connectRouter(reader, &state.routerCache)
@@ -416,11 +502,11 @@ func withRouter(reader *bufio.Reader, state *appState, action func(*sshClientWra
 	action(&sshClientWrapper{client: router})
 }
 
-func installServerOnRouter(reader *bufio.Reader, state *appState, server Server) bool {
+func installServerOnRouter(reader *bufio.Reader, state *appState, server Server) installRouterResult {
 	router, err := connectRouter(reader, &state.routerCache)
 	if err != nil {
 		printRouterError("Ошибка подключения к роутеру", err)
-		return false
+		return installRouterStay
 	}
 	defer router.Close()
 
@@ -429,17 +515,44 @@ func installServerOnRouter(reader *bufio.Reader, state *appState, server Server)
 	fmt.Println("Сервер: " + serverLabel(server))
 	fmt.Println("Роутер: " + state.routerCache.label())
 	fmt.Println("Файл: " + routerConfigPath)
+	showRouterInstallDiff(router, server)
 	if !confirmYNDefaultYes(reader, "Продолжить? Введите y/n: ") {
 		printWarning("Запись отменена")
-		return false
+		return installRouterStay
 	}
 
-	if err := installRouterConfig(router, server); err != nil {
+	backupPath, err := installRouterConfig(router, server)
+	if err != nil {
 		printRouterError("Ошибка настройки роутера", err)
-		return false
+		return installRouterStay
+	}
+	if err := appendInstallHistory(server, state.routerCache.label(), backupPath, time.Now()); err != nil {
+		printWarning("Не удалось записать историю установки: " + err.Error())
 	}
 	printSuccess("Конфиг сохранен, sing-box перезагружен")
-	return handleRouterPostActions(reader, router)
+	if handleRouterPostActions(reader, router) {
+		return installRouterExit
+	}
+	return installRouterSwitchServer
+}
+
+func showRouterInstallDiff(router routerClient, server Server) {
+	current, err := currentRouterProxy(router)
+	if err != nil {
+		printWarning("Текущий outbound proxy не прочитан: " + err.Error())
+		return
+	}
+
+	next, err := singBoxOutboundText(server)
+	if err != nil {
+		printWarning("Новый outbound proxy не создан: " + err.Error())
+		return
+	}
+
+	fmt.Println()
+	printTitle("Изменения outbound proxy:")
+	fmt.Println(simpleDiff(current, next))
+	fmt.Println()
 }
 
 func handleRouterPostActions(reader *bufio.Reader, router routerClient) bool {
@@ -448,7 +561,8 @@ func handleRouterPostActions(reader *bufio.Reader, router routerClient) bool {
 		printTitle("Что сделать дальше?")
 		fmt.Println("1. Посмотреть логи sing-box")
 		fmt.Println("2. Проверить статус sing-box")
-		fmt.Println("3. Сменить сервер")
+		fmt.Println("3. Вернуть предыдущий config sing-box")
+		fmt.Println("4. Сменить сервер")
 		fmt.Println("0. Выйти")
 		fmt.Print("Выберите пункт: ")
 
@@ -475,6 +589,22 @@ func handleRouterPostActions(reader *bufio.Reader, router routerClient) bool {
 		case 2:
 			printRouterStatus(router)
 		case 3:
+			backupPath, err := latestRouterBackupPath(router)
+			if err != nil {
+				printRouterError("Backup не найден", err)
+				break
+			}
+			printWarning("Будет восстановлен backup: " + backupPath)
+			if !confirmYN(reader, "Продолжить? Введите y/n: ") {
+				printWarning("Восстановление отменено")
+				break
+			}
+			if err := restoreRouterConfig(router); err != nil {
+				printRouterError("Не удалось восстановить backup", err)
+				break
+			}
+			printSuccess("Предыдущий config sing-box восстановлен")
+		case 4:
 			return false
 		default:
 			printWarning("Неверный пункт меню")
@@ -489,6 +619,8 @@ func routerPostActionTitle(choice int) string {
 	case 2:
 		return "Проверить статус sing-box"
 	case 3:
+		return "Вернуть предыдущий config sing-box"
+	case 4:
 		return "Сменить сервер"
 	default:
 		return "Неверный пункт меню"
@@ -597,6 +729,17 @@ func refreshServers(state *appState) {
 	printSuccess(fmt.Sprintf("Список серверов обновлен. Серверов: %d", len(servers)))
 }
 
+func pingAndSortVisibleServers(state *appState) {
+	if len(state.visibleServers) == 0 {
+		printWarning("Список серверов пуст")
+		return
+	}
+
+	printInfo("Проверяю пинг серверов...")
+	state.visibleServers = pingAndSortServers(state.visibleServers, state.pings)
+	printSuccess(fmt.Sprintf("Пинг проверен. Серверов: %d", len(state.visibleServers)))
+}
+
 func refreshServerPing(state *appState, server Server) string {
 	ping := formatPingResult(pingServer(server, pingTimeout))
 	state.pings[serverPingKey(server)] = ping
@@ -631,6 +774,63 @@ func exportSingBoxOutbound(reader *bufio.Reader, server Server) error {
 	}
 	printSuccess("Файл сохранен: " + path)
 	return nil
+}
+
+func exportFullSingBoxConfig(reader *bufio.Reader, server Server) error {
+	bodyText, err := fullSingBoxConfigText(server)
+	if err != nil {
+		return err
+	}
+	body := []byte(bodyText + "\n")
+
+	fmt.Print("Введите путь файла или нажмите Enter для sing-box-config.json: ")
+	pathText, err := reader.ReadString('\n')
+	if err != nil {
+		return err
+	}
+
+	path := strings.TrimSpace(pathText)
+	if path == "" {
+		path = "sing-box-config.json"
+	}
+
+	if err := os.WriteFile(path, body, 0600); err != nil {
+		return err
+	}
+	printSuccess("Файл сохранен: " + path)
+	return nil
+}
+
+func showInstallHistory(reader *bufio.Reader) {
+	entries, err := readInstallHistory()
+	if err != nil {
+		printError("Ошибка чтения истории: " + err.Error())
+		return
+	}
+	showInfoWithBack(reader, "История установок", installHistoryText(entries))
+}
+
+func simpleDiff(before string, after string) string {
+	beforeLines := strings.Split(strings.TrimSpace(before), "\n")
+	afterLines := strings.Split(strings.TrimSpace(after), "\n")
+	var builder strings.Builder
+
+	for _, line := range beforeLines {
+		builder.WriteString(colorRed)
+		builder.WriteString("- ")
+		builder.WriteString(line)
+		builder.WriteString(colorReset)
+		builder.WriteString("\n")
+	}
+	for _, line := range afterLines {
+		builder.WriteString(colorGreen)
+		builder.WriteString("+ ")
+		builder.WriteString(line)
+		builder.WriteString(colorReset)
+		builder.WriteString("\n")
+	}
+
+	return strings.TrimRight(builder.String(), "\n")
 }
 
 func confirmYN(reader *bufio.Reader, prompt string) bool {
@@ -687,6 +887,63 @@ func readMenuChoice(reader *bufio.Reader) (int, error) {
 	}
 
 	return strconv.Atoi(text)
+}
+
+func readActionChoice(reader *bufio.Reader) (string, error) {
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		return readRawActionChoice()
+	}
+
+	text, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(strings.ToLower(text)), nil
+}
+
+func readRawActionChoice() (string, error) {
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+	var digits []byte
+	buffer := make([]byte, 1)
+	for {
+		if _, err := os.Stdin.Read(buffer); err != nil {
+			return "", err
+		}
+
+		key := buffer[0]
+		switch {
+		case key == 3:
+			fmt.Println()
+			return "q", nil
+		case key == 'r' || key == 'R' || key == 'p' || key == 'P' || key == 'q' || key == 'Q':
+			fmt.Printf("%c\n", key)
+			return strings.ToLower(string(key)), nil
+		case key >= '0' && key <= '9':
+			digits = append(digits, key)
+			fmt.Printf("%c", key)
+			if key == '0' && len(digits) == 1 {
+				fmt.Println()
+				return "0", nil
+			}
+		case key == '\r' || key == '\n':
+			if len(digits) == 0 {
+				fmt.Println()
+				return "", nil
+			}
+			fmt.Println()
+			return string(digits), nil
+		case key == 127 || key == 8:
+			if len(digits) > 0 {
+				digits = digits[:len(digits)-1]
+				fmt.Print("\b \b")
+			}
+		}
+	}
 }
 
 func shortText(value string, limit int) string {

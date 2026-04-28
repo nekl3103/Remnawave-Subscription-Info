@@ -40,6 +40,62 @@ func singBoxOutboundsText(server Server) (string, error) {
 	return string(body), nil
 }
 
+func singBoxOutboundText(server Server) (string, error) {
+	outbound, err := singBoxOutbound(server)
+	if err != nil {
+		return "", err
+	}
+
+	body, err := json.MarshalIndent(outbound, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func fullSingBoxConfigText(server Server) (string, error) {
+	outbound, err := singBoxOutbound(server)
+	if err != nil {
+		return "", err
+	}
+
+	config := map[string]any{
+		"log": map[string]any{
+			"level": "info",
+		},
+		"dns": map[string]any{
+			"servers": []any{
+				map[string]any{"tag": "google", "address": "8.8.8.8"},
+				map[string]any{"tag": "cloudflare", "address": "1.1.1.1"},
+			},
+		},
+		"inbounds": []any{
+			map[string]any{
+				"type":                       "mixed",
+				"tag":                        "mixed-in",
+				"listen":                     "127.0.0.1",
+				"listen_port":                2080,
+				"sniff":                      true,
+				"sniff_override_destination": true,
+			},
+		},
+		"outbounds": []any{
+			outbound,
+			map[string]any{"type": "direct", "tag": "direct"},
+			map[string]any{"type": "block", "tag": "block"},
+		},
+		"route": map[string]any{
+			"final": "proxy",
+		},
+	}
+
+	body, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
 func printConnectionLink(server Server) error {
 	link, err := connectionLink(server)
 	if err != nil {
@@ -51,10 +107,29 @@ func printConnectionLink(server Server) error {
 	return nil
 }
 
+func printSubscriptionLink(server Server) error {
+	link, err := connectionLink(server)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+	printTitle("Ваша подписка")
+	fmt.Println()
+	fmt.Println(colorBlue + link + colorReset)
+	return nil
+}
+
+func subscriptionLinkText(server Server) (string, error) {
+	return connectionLink(server)
+}
+
 func connectionLink(server Server) (string, error) {
 	switch server.Protocol {
 	case "vless":
 		return vlessLink(server), nil
+	case "vmess":
+		return vmessLink(server)
 	case "shadowsocks":
 		return shadowsocksLink(server)
 	case "trojan":
@@ -64,6 +139,38 @@ func connectionLink(server Server) (string, error) {
 	default:
 		return "", fmt.Errorf("протокол %q не поддержан для генерации ссылки", server.Protocol)
 	}
+}
+
+func vmessLink(server Server) (string, error) {
+	uuid := firstNonEmpty(server.Details["uuid"], server.Details["id"], server.Details["user"])
+	if uuid == "" {
+		return "", errors.New("не хватает uuid/id для VMess")
+	}
+
+	data := map[string]string{
+		"v":    firstNonEmpty(server.Details["v"], "2"),
+		"ps":   server.Name,
+		"add":  server.Address,
+		"port": server.Port,
+		"id":   uuid,
+		"aid":  firstNonEmpty(server.Details["alter_id"], server.Details["alterId"], server.Details["aid"], "0"),
+		"scy":  firstNonEmpty(server.Details["security"], server.Details["scy"], "auto"),
+		"net":  firstNonEmpty(server.Details["network"], server.Details["net"], server.Details["type"], "tcp"),
+		"type": firstNonEmpty(server.Details["headerType"], server.Details["header_type"], server.Details["type"]),
+		"host": firstNonEmpty(server.Details["host"], server.Details["transport.headers.Host"]),
+		"path": firstNonEmpty(server.Details["path"], server.Details["transport.path"]),
+		"tls":  firstNonEmpty(server.Details["tls"], server.Details["security"]),
+		"sni":  firstNonEmpty(server.Details["sni"], server.Details["server_name"], server.Details["tls.server_name"]),
+	}
+	if data["tls"] == "none" {
+		data["tls"] = ""
+	}
+
+	body, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	return "vmess://" + base64.StdEncoding.EncodeToString(body), nil
 }
 
 func displayLinkProtocol(protocol string) string {
@@ -371,6 +478,10 @@ func addTransportFromDetails(outbound map[string]any, details map[string]string)
 }
 
 func singBoxOutbound(server Server) (map[string]any, error) {
+	if server.Protocol == "vmess" {
+		return vmessOutbound(server)
+	}
+
 	if server.Raw != nil {
 		outbound := cloneMap(server.Raw)
 		outbound["tag"] = "proxy"
@@ -439,6 +550,70 @@ func singBoxOutbound(server Server) (map[string]any, error) {
 	default:
 		return nil, fmt.Errorf("протокол %q не поддержан для генерации sing-box", server.Protocol)
 	}
+}
+
+func vmessOutbound(server Server) (map[string]any, error) {
+	uuid := firstNonEmpty(server.Details["uuid"], server.Details["id"], server.Details["user"])
+	if uuid == "" {
+		return nil, errors.New("не хватает uuid/id для VMess")
+	}
+
+	outbound := map[string]any{
+		"type":        "vmess",
+		"tag":         "proxy",
+		"server":      server.Address,
+		"server_port": numberOrString(server.Port),
+		"uuid":        uuid,
+		"security":    firstNonEmpty(server.Details["security"], server.Details["scy"], "auto"),
+	}
+	if alterID := firstNonEmpty(server.Details["alter_id"], server.Details["alterId"], server.Details["aid"]); alterID != "" {
+		outbound["alter_id"] = numberOrString(alterID)
+	}
+
+	addVMessTLS(outbound, server.Details)
+	addVMessTransport(outbound, server.Details)
+	return outbound, nil
+}
+
+func addVMessTLS(outbound map[string]any, details map[string]string) {
+	tlsMode := strings.ToLower(firstNonEmpty(details["tls"], details["security"]))
+	if tlsMode != "tls" && tlsMode != "reality" {
+		return
+	}
+
+	tls := map[string]any{"enabled": true}
+	if serverName := firstNonEmpty(details["sni"], details["server_name"], details["tls.server_name"]); serverName != "" {
+		tls["server_name"] = serverName
+	}
+	if alpn := firstNonEmpty(details["alpn"], details["tls.alpn"]); alpn != "" {
+		tls["alpn"] = splitCommaValues(alpn)
+	}
+	outbound["tls"] = tls
+}
+
+func addVMessTransport(outbound map[string]any, details map[string]string) {
+	network := strings.ToLower(firstNonEmpty(details["network"], details["net"], details["transport.type"]))
+	if network == "" || network == "tcp" {
+		return
+	}
+
+	transport := map[string]any{"type": network}
+	switch network {
+	case "ws":
+		if path := firstNonEmpty(details["path"], details["transport.path"]); path != "" {
+			transport["path"] = path
+		}
+		if host := firstNonEmpty(details["host"], details["transport.headers.Host"]); host != "" {
+			transport["headers"] = map[string]any{"Host": host}
+		}
+	case "grpc":
+		if serviceName := firstNonEmpty(details["serviceName"], details["service_name"], details["transport.service_name"]); serviceName != "" {
+			transport["service_name"] = serviceName
+		}
+	default:
+		return
+	}
+	outbound["transport"] = transport
 }
 
 func cloneMap(source map[string]any) map[string]any {

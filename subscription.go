@@ -159,7 +159,7 @@ func isValidServer(server Server) bool {
 	}
 
 	switch normalizeProtocol(server.Protocol) {
-	case "vless", "trojan", "shadowsocks", "hysteria", "hysteria2":
+	case "vless", "vmess", "trojan", "shadowsocks", "hysteria", "hysteria2":
 		return true
 	default:
 		return false
