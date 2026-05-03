@@ -699,12 +699,12 @@
       <section class="hero">
         <div class="container hero-grid">
           <div>
-            <p class="eyebrow"><span class="dot"></span> CLI Remnawave для OpenWrt(sing-box)</p>
+            <p class="eyebrow"><span class="dot"></span> CLI Remnawave для OpenWrt и sing-box</p>
             <span class="version">v0.0.3</span>
             <h1>Быстрая настройка sing-box из подписки Remnawave</h1>
             <p class="lead">
-              Программа показывает серверы из подписки, помогает выбрать нужный узел и обновляет
-              конфигурацию sing-box на роутере OpenWrt через SSH.
+              Программа показывает серверы из подписки, передает HWID при загрузке, помогает выбрать нужный узел и
+              обновляет конфигурацию sing-box на роутере OpenWrt через SSH.
             </p>
             <div class="hero-actions">
               <a class="btn btn-primary" href="#download">Скачать</a>
@@ -749,7 +749,7 @@
             <article class="card">
               <span class="icon">01</span>
               <h3>Список серверов</h3>
-              <p>Загружает подписку Remnawave, показывает серверы и поддерживает поиск, фильтр и обновление списка.</p>
+              <p>Загружает подписку Remnawave, передает HWID, показывает серверы и поддерживает поиск, фильтр и обновление списка.</p>
             </article>
             <article class="card">
               <span class="icon">02</span>
@@ -764,15 +764,20 @@
             <article class="card">
               <span class="icon">04</span>
               <h3>Запись на роутер</h3>
-              <p>Подключается к OpenWrt по SSH и обновляет только outbound с тегом proxy.</p>
+              <p>Подключается к OpenWrt по SSH и обновляет только outbound с тегом proxy, не трогая остальные правила.</p>
             </article>
             <article class="card">
               <span class="icon">05</span>
+              <h3>Обновление OpenWrt</h3>
+              <p>Подбирает совместимые sysupgrade-образы по board name и supported_devices, чтобы не ошибиться с прошивкой.</p>
+            </article>
+            <article class="card">
+              <span class="icon">06</span>
               <h3>Backup</h3>
               <p>Создает резервную копию config.json.bak перед заменой конфига.</p>
             </article>
             <article class="card">
-              <span class="icon">06</span>
+              <span class="icon">07</span>
               <h3>Статус и логи</h3>
               <p>Показывает состояние sing-box и выводит логи сервиса в реальном времени.</p>
             </article>
@@ -784,7 +789,7 @@
         <div class="container">
           <div class="section-head">
             <h2>Требования</h2>
-            <p>Перед записью на роутер должны быть готовы базовые настройки OpenWrt и sing-box.</p>
+            <p>Перед записью на роутер должны быть готовы базовые настройки OpenWrt, sing-box и SSH-доступ.</p>
           </div>
           <div class="grid requirements">
             <article class="card">
@@ -820,14 +825,14 @@
         <div class="container">
           <div class="section-head">
             <h2>Как выглядит работа с сервером</h2>
-            <p>Пять основных экранов CLI: от загрузки подписки до управления выбранным сервером и роутером.</p>
+            <p>Четыре основных экрана CLI: от загрузки подписки до управления выбранным сервером и роутером.</p>
           </div>
           <div class="preview-slider" data-slider>
             <div class="preview-content">
               <div class="preview-copy">
                 <h3 data-slider-title>Главный экран</h3>
                 <p data-slider-text>Программа стартует в терминале, показывает версию, ссылки проекта и сразу просит вставить ссылку подписки Remnawave.</p>
-                <div class="preview-note" data-slider-note>Этот экран нужен, чтобы быстро начать работу без отдельной настройки или конфигурационного файла.</div>
+                <div class="preview-note" data-slider-note>Стартовый экран нужен, чтобы начать работу без отдельной настройки или конфигурационного файла.</div>
               </div>
               <div class="preview-controls" aria-label="Управление слайдером">
                 <button class="slider-btn" type="button" data-slider-prev aria-label="Предыдущий слайд">‹</button>
@@ -836,36 +841,30 @@
               <div class="preview-dots" aria-label="Выбор слайда">
                 <button class="preview-dot is-active" type="button" data-slider-dot="0" aria-label="Показать главный экран"></button>
                 <button class="preview-dot" type="button" data-slider-dot="1" aria-label="Показать список серверов"></button>
-                <button class="preview-dot" type="button" data-slider-dot="2" aria-label="Показать управление сервером"></button>
-                <button class="preview-dot" type="button" data-slider-dot="3" aria-label="Показать детальную информацию"></button>
-                <button class="preview-dot" type="button" data-slider-dot="4" aria-label="Показать управление роутером"></button>
+                <button class="preview-dot" type="button" data-slider-dot="2" aria-label="Показать получение настроек сервера"></button>
+                <button class="preview-dot" type="button" data-slider-dot="3" aria-label="Показать управление сервером"></button>
               </div>
             </div>
             <div class="preview-stage">
               <div class="preview-slide is-active" data-title="Главный экран"
                 data-text="Программа стартует в терминале, показывает версию, ссылки проекта и сразу просит вставить ссылку подписки Remnawave."
-                data-note="Этот экран нужен, чтобы быстро начать работу без отдельной настройки или конфигурационного файла.">
-                <img src="images/Главная.jpeg" alt="Главный экран Remnawave Subscription Info">
+                data-note="Стартовый экран нужен, чтобы начать работу без отдельной настройки или конфигурационного файла.">
+                <img src="images/Главная.jpg" alt="Главный экран Remnawave Subscription Info">
               </div>
               <div class="preview-slide" data-title="Список серверов"
                 data-text="После загрузки подписки появляется таблица серверов с названием, протоколом, адресом, портом и пингом."
                 data-note="Из этого списка можно выбрать сервер, обновить пинг, выполнить поиск или отфильтровать узлы по протоколу.">
-                <img src="images/список серверов.jpeg" alt="Список серверов в Remnawave Subscription Info">
+                <img src="images/Список серверов.jpg" alt="Список серверов в Remnawave Subscription Info">
+              </div>
+              <div class="preview-slide" data-title="Получить настройки сервера"
+                data-text="Экран настроек показывает подключение к серверу и помогает быстро взять данные для sing-box."
+                data-note="Здесь видно детальную конфигурацию узла без ручного поиска по подписке.">
+                <img src="images/Получить настройки сервера.jpg" alt="Получение настроек сервера в Remnawave Subscription Info">
               </div>
               <div class="preview-slide" data-title="Управление сервером"
-                data-text="После выбора сервера открывается меню действий: получить ссылку подключения, показать outbound, установить на роутер или экспортировать JSON."
-                data-note="В этом же меню доступны статус, логи sing-box, backup, восстановление конфига и сброс временно сохранённых SSH-данных.">
-                <img src="images/управление сервером.png" alt="Меню управления сервером в Remnawave Subscription Info">
-              </div>
-              <div class="preview-slide" data-title="Детальная информация"
-                data-text="Экран деталей показывает параметры выбранного узла: протокол, адрес, порт, transport, TLS и другие поля из подписки."
-                data-note="Чувствительные значения вроде паролей, UUID и токенов скрываются, чтобы их можно было безопасно показать на экране.">
-                <img src="images/детальная информация.jpeg" alt="Детальная информация о сервере в Remnawave Subscription Info">
-              </div>
-              <div class="preview-slide" data-title="Управление роутером"
-                data-text="После установки можно сразу посмотреть логи sing-box, проверить статус сервиса, сменить сервер или выйти из программы."
+                data-text="После выбора сервера открывается меню действий: установить на роутер, экспортировать JSON или посмотреть логи sing-box."
                 data-note="Перед записью создаётся backup, затем сервис перезапускается.">
-                <img src="images/Управление роутером.jpeg" alt="Управление роутером в Remnawave Subscription Info">
+                <img src="images/Управление сервером.jpg" alt="Управление сервером в Remnawave Subscription Info">
               </div>
             </div>
           </div>
@@ -883,7 +882,7 @@
               <span class="step-number">1</span>
               <div>
                 <h3>Вставьте ссылку подписки</h3>
-                <p>Программа загрузит серверы Remnawave и подготовит список для выбора.</p>
+                <p>Программа загрузит серверы Remnawave, отправит HWID и подготовит список для выбора.</p>
               </div>
             </article>
             <article class="card step">
@@ -986,19 +985,23 @@
         <div class="container">
           <div class="section-head">
             <h2>FAQ и безопасность</h2>
-            <p>Коротко о том, что происходит при записи конфигурации на роутер.</p>
+            <p>Коротко о том, что происходит при записи конфигурации на роутер и загрузке подписки.</p>
           </div>
           <div class="grid faq-grid">
             <article class="card notice">
               <span class="icon">!</span>
               <h3>Пароль сохраняется?</h3>
-              <p>SSH-пароль хранится только в памяти текущего запуска. После перезапуска программы его нужно ввести
-                снова.</p>
+              <p>SSH-пароль хранится только в памяти текущего запуска. После перезапуска программы его нужно ввести снова.</p>
             </article>
             <article class="card notice">
               <span class="icon">HK</span>
               <h3>Проверяется host key?</h3>
               <p>При первом SSH-подключении программа показывает fingerprint и сохраняет доверенный ключ.</p>
+            </article>
+            <article class="card notice">
+              <span class="icon">HW</span>
+              <h3>Зачем нужен HWID?</h3>
+              <p>Программа отправляет `x-hwid` при загрузке подписки, а при ограничении по устройствам показывает понятную ошибку.</p>
             </article>
             <article class="card">
               <span class="icon">?</span>
